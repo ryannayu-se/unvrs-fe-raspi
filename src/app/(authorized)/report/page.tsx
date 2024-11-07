@@ -26,7 +26,10 @@ const Report: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const response = await api.get('/config/devices');
+      const authToken = localStorage.getItem('authToken');
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+
+      const response = await api.get('/config/devices', { headers });
       setListDevices(response.data);
     } catch (error) {
       setError('Failed to fetch devices. Please try again later.');

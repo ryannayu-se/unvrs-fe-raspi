@@ -7,6 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import Sidebar from "@/components/sidebar";
+import AuthWrapper from "./AuthWrapper";
 
 const listMenu = [
   { name: 'Dashboard', href: '/', current: false },
@@ -46,7 +47,7 @@ export default function RootLayout({
               <Sidebar props={listMenu} />
             </div> */}
             <div className="flex-1">
-              {children}
+              <AuthWrapper>{children}</AuthWrapper>
             </div>
           </div>
           <Footer />

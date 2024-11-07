@@ -27,8 +27,10 @@ const Config:React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const authToken = localStorage.getItem('authToken');
+        const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
         // Fetch data from your API
-        const response = await api.get('/config/devices'); // Replace with your data API endpoint
+        const response = await api.get('/config/devices', { headers }); // Replace with your data API endpoint
         const fetchedData: TableData[] = response.data; // Adjust according to your API response structure
 
         if (fetchedData.length > 0) {

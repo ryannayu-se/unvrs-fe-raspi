@@ -12,8 +12,11 @@ const ModalDelete: React.FC<MessageProps> = ({id, message, route, onSubmitSucces
   const handleDelete = async (event: React.FormEvent<HTMLButtonElement>) => {
     event.preventDefault();
     try{
+      const authToken = localStorage.getItem('authToken');
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+
       if(id){
-        const response = await api.delete(`${route}/${id}`);
+        const response = await api.delete(`${route}/${id}`, { headers });
         console.log('Success delete ID: ',id);
         onSubmitSuccess();
       }

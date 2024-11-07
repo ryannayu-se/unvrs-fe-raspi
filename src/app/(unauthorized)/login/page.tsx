@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import api from "@/config/apiConnection";
 import { useRouter } from "next/navigation"; // Use router for redirection
 
@@ -38,6 +38,10 @@ const Login: React.FC = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        localStorage.removeItem('authToken');
+    }, []);
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">

@@ -31,3 +31,33 @@ body {
     text-wrap: balance;
   }
 }
+
+@font-face {
+  font-family: 'Digital7';
+  src: url('/fonts/7segments.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.odometer-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.odometer {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.value {
+  position: absolute;
+  top: 85px; /* Adjust to center vertically */
+  left: 85px; /* Adjust to center horizontally */
+  font-size: 24px;
+  font-family: 'Courier New', Courier, monospace;
+  color: black;
+}
+

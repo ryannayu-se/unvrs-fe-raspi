@@ -24,17 +24,19 @@ export interface AddressVariableData {
   length_address: number;
   variable_name: string;
   unit: string;
+  multiplier_value: number;
 }
 
 type DynamicForm = DevicesData | AddressDeviceData | AddressVariableData | TableData;
 
 export interface SelectOption {
-  id: number,
+  id: number | string | null,
   value: string,
+  disabled?: boolean,
 }
 
 export interface FieldConfig {
-  type: 'text' | 'number' | 'select'; // Add more types if needed
+  type: 'text' | 'number' | 'select' | 'colour'; // Add more types if needed
   options?: SelectOption[]; // Options for dropdowns
 }
 
@@ -73,11 +75,14 @@ const ModalForm: React.FC<DataDisplayProps> = ({ data, route, onSubmitSuccess, f
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
+      const authToken = localStorage.getItem('authToken');
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+
       if (id) {
-        const response = await api.put(`${route}/${id}`, formData);
+        const response = await api.put(`${route}/${id}`, formData, { headers });
         console.log('Response:', response.data);
       } else {
-        const response = await api.post(route, formData);
+        const response = await api.post(route, formData, { headers });
         console.log('Response:', response.data);
       }
       console.log('Submit successful');
@@ -131,16 +136,52 @@ const ModalForm: React.FC<DataDisplayProps> = ({ data, route, onSubmitSuccess, f
                 className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 name={key}
                 id={key}
-                value={value as string}
+                value={value as string || '-1'}
                 onChange={handleChange}
               >
-                {config.options?.map((option, i) => (
-                  <option key={option.id} value={option.id}>
+                {config.options?.map((option) => (
+                  <option 
+                    key={option.id} 
+                    value={option.id ?? '-1'} 
+                    disabled={option.disabled}
+                    // selected={option.id === -1 ? true : undefined}
+                    className={option.id == -1 ? 'text-gray-900' : ''}
+                  >
                     {option.value}
                   </option>
                 ))}
               </select>
             );
+            break;
+            case 'colour':
+              inputElement = (
+                <div className="flex items-center">
+                  {/* Color Picker */}
+                  <input
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    type="color"
+                    name={key}
+                    id={key}
+                    value={value && /^#[0-9A-F]{6}$/i.test(value) ? value : "#000000"} // Default to black if value is invalid
+                    onChange={handleChange}
+                    style={{
+                      backgroundColor: value && /^#[0-9A-F]{6}$/i.test(value) ? value : "#000000", // Preview color
+                      border: value ? '2px solid #4CAF50' : '2px solid transparent', // Border change when color is selected
+                    }}
+                  />
+            
+                  {/* Color Preview */}
+                  <div
+                    className="ml-2 w-8 h-8 border border-gray-300 rounded-full"
+                    style={{ backgroundColor: value && /^#[0-9A-F]{6}$/i.test(value) ? value : "#000000" }}
+                  ></div>
+                  
+                  {/* Optionally, show the hex code */}
+                  <span className="ml-2 text-sm text-gray-600">
+                    {value && /^#[0-9A-F]{6}$/i.test(value) ? value : "#000000"}
+                  </span>
+                </div>
+              );
             break;
           default:
             inputElement = (

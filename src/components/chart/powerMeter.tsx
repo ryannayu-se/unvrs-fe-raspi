@@ -1,64 +1,36 @@
 "use client"
-import React, {useEffect, useState} from 'react';
-import { ResponsiveContainer, 
-	LineChart, Line, 
-	AreaChart, Area,
-	PieChart, Pie, Cell,
-	CartesianGrid, XAxis, YAxis,Tooltip, Legend} from 'recharts';
-import { Settings, Trash2, Plus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Settings, Trash2 } from 'lucide-react';
 
-import api from "@/config/apiConnection";
+import api from '@/config/apiConnection';
 import { ChartType, MstAddressVariable } from '@/interface/variableInterface';
-import { ChartMenu, InitialData, ChartProps  } from '@/interface/chartInterface';
-import {dumpAddressVariable, dumpChartType} from "../../dump/variableDump";
+import { dumpAddressVariable, dumpChartType } from '@/dump/variableDump';
 
-import ModalForm  from '../modal/modalForm';
+import ModalForm, { FieldConfig } from '../modal/modalForm';
 import ModalDelete from '../modal/modalDelete';
 import DynamicModal from '../modal/dynamicModal';
-import { FieldConfig } from '../modal/modalForm';
+
+import { LineData, InitialData, StreamingProps } from '@/interface/chartInterface';
 import { useRouter } from 'next/navigation';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
-
-const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }:
-	{
-		cx: number, 
-		cy: number,
-		midAngle: number,
-		innerRadius: number,
-		outerRadius: number,
-		percent: number,
-		index: number
-	}
-) => {
-	const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-	const x = cx + radius * Math.cos(-midAngle * RADIAN);
-	const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-	return (
-		<text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-			{`${(percent * 100).toFixed(0)}%`}
-		</text>
-	);
-};
-
-const Chart: React.FC<ChartProps> = ({props}) => {
-	const router = useRouter();
+const PowerMeter: React.FC<StreamingProps> = ({ props, dataSocket }) => {
+	const router = useRouter()
 	const initialLines = props.lines || [];
-  const [data, setData] = useState<any[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [chartProps, setChartProps] = useState<ChartMenu>(props);
   const [modalTitle, setModalTitle] = useState<string>('');
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
 
 	const [fieldConfig, setFieldConfig] = useState<Record<string, FieldConfig>>({});
 	const [variableCount, setVariableCount] = useState(props.lines?.length || 0); // Initialize with existing lines
-	
+
+  const fixedVariableCount = 12; // Set fixed total variable count
+  const columnCount = 2; // Number of columns
+  const itemsPerColumn = Math.ceil(fixedVariableCount / columnCount); // Calculate number of items per column
+
 	const initialData: InitialData = {
 		chart_id: props.chart_id,
 		chart_name: props.chart_name,
@@ -68,25 +40,25 @@ const Chart: React.FC<ChartProps> = ({props}) => {
 		variable_key: props.lines?.[0]?.data_key || '',
 		variable_index_name: props.lines?.[0]?.name || '',
 		variable_color: props.lines?.[0]?.stroke || '#000000',
-		variable_id: props.lines?.[0]?.var_id || -2,
+		variable_id: props.lines?.[0]?.var_id || '',
 		variable_name: props.lines?.[0]?.var_name || '',
 		// variable_unit: props.lines?.[0]?.var_unit || '',
 	};
 
 	// Dynamically add line properties to initialData
-	for (let index = 1; index < variableCount; index++) {
+	for (let index = 1; index < fixedVariableCount; index++) {
 		initialData[`variable_key${index + 1}`] = `value${index + 1}` || '';
 		initialData[`variable_data_id${index + 1}`] = initialLines[index]?.data_id || '';
 		initialData[`variable_index_name${index + 1}`] = initialLines[index]?.name || '';
 		initialData[`variable_color${index + 1}`] = initialLines[index]?.stroke || '#000000';
-		initialData[`variable_id${index + 1}`] = initialLines[index]?.var_id || -2;
+		initialData[`variable_id${index + 1}`] = initialLines[index]?.var_id || '';
 		initialData[`variable_name${index + 1}`] = initialLines[index]?.var_name || '';
 		// initialData[`variable_unit${index + 1}`] = initialLines[index]?.var_unit || '';
 	}
 
   const closeModal = () => {
-		setIsModalOpen(false);
-  }
+    setIsModalOpen(false);
+  };
 
 	const addVariable = () => {
 		const newCount = variableCount + 1; // Calculate new count
@@ -110,7 +82,7 @@ const Chart: React.FC<ChartProps> = ({props}) => {
 			initialData[`variable_data_id${index > 0 ? index + 1 : ''}`] = initialLines[index]?.data_id || '';
 			initialData[`variable_index_name${index > 0 ? index + 1 : ''}`] = initialLines[index]?.name || '';
 			initialData[`variable_color${index > 0 ? index + 1 : ''}`] = initialLines[index]?.stroke || '#000000';
-			initialData[`variable_id${index > 0 ? index + 1 : ''}`] = initialLines[index]?.var_id || -2;
+			initialData[`variable_id${index > 0 ? index + 1 : ''}`] = initialLines[index]?.var_id || '';
 			initialData[`variable_name${index > 0 ? index + 1 : ''}`] = initialLines[index]?.var_name || '';
 		}
 
@@ -145,12 +117,36 @@ const Chart: React.FC<ChartProps> = ({props}) => {
       message={`Delete Chart ${props.chart_name}`}
       route={'/config/cardDashboard'}
       onSubmitSuccess={() => {
-        closeModal();
+				closeModal();
 				window.location.reload();
       }}
     />)
 		setIsModalOpen(true);
 	}
+
+  // Extract var_id from props.lines
+  const validVariableIds = props.lines?.flatMap((line: LineData) => line.var_id) || [];
+
+  // Filter dataSocket based on validVariableIds
+  const filteredDataSocket = dataSocket?.filter(item => validVariableIds.includes(item.variable_id));
+
+  // Prepare data for rendering
+  const organizedData = Array.from({ length: columnCount }, (_, colIndex) =>
+    filteredDataSocket.slice(colIndex * itemsPerColumn, (colIndex + 1) * itemsPerColumn) // Slice data for each column
+  );
+
+  // Function to render each variable
+	const renderVariable = (variableName: string, variableValue: number, variableUnit: string, color: string) => (
+		<div className="flex flex-row justify-between items-center border border-white-600" key={variableName}>
+			<div className="flex items-center mx-2">
+				<div className="text-white text-xs">{variableName}:</div>
+				<div className={`font-segment text-md mx-2 px-2 py-2`} style={{ color: color }}>
+					{variableValue.toFixed(2)} {/* Ensure two decimal places */}
+				</div>
+				<div className="text-white text-xs">{variableUnit}</div>
+			</div>
+		</div>
+	);
 
 	const fetchData = async () => {
     try {
@@ -214,97 +210,59 @@ const Chart: React.FC<ChartProps> = ({props}) => {
 	useEffect(() => {
 		fetchData();
 	}, [variableCount])
-  
-	return (
-		<div className="w-100 h-full rounded-2xl bg-black mx-2 my-2">
-			<div className="flex flex-col gap-2 p-2">
-				<div>
-					<div className="pt-2 pl-2 pb-2 flex justify-between items-center">
-						<a className="text-white">
-							{props.chart_name}
-						</a>
-						<div className='justify-right'>
-							<button 
-								className="mr-2 text-gray-500" 
-								onClick={addVariable}
-								>
-								<Plus />
-							</button>
-							<button 
-								className="mr-2 text-gray-500" 
-								onClick={handleDelete}
-								>
-								<Trash2 />
-							</button>
-							<button 
-								className="text-gray-500" 
-								onClick={handleSettings}
-								>
-								<Settings />
-							</button>
-						</div>
-					</div>
 
-					<div>
-						<ResponsiveContainer width="100%" minHeight={250}>
-							{
-							props.chart_type == "line"?
-							<LineChart data={props.data}>
-								<CartesianGrid/>
-								<XAxis dataKey="date"/>
-								<YAxis/>
-								<Tooltip/>
-								<Legend/>
-								{props.lines && props.lines.map((line, index) => (
-									<Line
-										key={index}
-										dataKey={line.data_key}
-										type='monotone'
-										stroke={line.stroke}
-										name={String(line.name)}
-									/>
-								))}
-							</LineChart>
-							:props.chart_type == "area"?
-							<AreaChart
-								width={500}
-								height={400}
-								data={props.data}
-								margin={{
-									top: 10,
-									right: 30,
-									left: 0,
-									bottom: 0,
-								}}
-							>
-								<CartesianGrid strokeDasharray="3 3" />
-								<XAxis dataKey="date" />
-								<YAxis />
-								<Tooltip />
-								<Area type="monotone" dataKey="value" stroke="#8884d8" fill="#8884d8" />
-							</AreaChart>
-							:props.chart_type == "pie"?
-							<PieChart width={400} height={400}>
-								<Pie
-									data={props.data}
-									cx="50%"
-									cy="50%"
-									labelLine={false}
-									label={renderCustomizedLabel}
-									outerRadius={100}
-									fill="#8884d8"
-									dataKey="value"
-								>
-									{props.data.map((entry, index) => (
-										<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-									))}
-								</Pie>
-							</PieChart>
-							:<></>}
-						</ResponsiveContainer>
-					</div>
-				</div>
+  return (
+    <div className="w-100 h-full rounded-2xl bg-black mx-2 my-2 p-4 flex flex-col justify-between">
+      <div className="pl-2 flex justify-between items-center">
+        <a className="text-white">{props.chart_name}</a>
+			<div className='justify-right'>
+				<button 
+					className="mr-2 text-gray-500" 
+					onClick={addVariable}
+					>
+					<Plus />
+				</button>
+				<button 
+					className="mr-2 text-gray-500" 
+					onClick={handleDelete}
+					>
+					<Trash2 />
+				</button>
+				<button 
+					className="text-gray-500" 
+					onClick={handleSettings}
+					>
+					<Settings />
+				</button>
 			</div>
+      </div>
+      <div className="flex w-full">
+        <div className="flex flex-row w-full">
+          {organizedData.map((column, colIndex) => (
+            <div key={colIndex} className="flex flex-col w-1/2">
+              {column.map(item => {
+              // Find the corresponding line to get the stroke color
+              const line = props.lines?.find(line => Array.isArray(line.var_id) ? line.var_id.includes(item.variable_id) : line.var_id === item.variable_id);
+              const color = line ? line.stroke : '#00FF00'; // Default color if not found
+
+              return renderVariable(item.variable_name, item.variable_value, item.variable_unit, color);
+            })}
+              {/* Fill remaining spaces with empty divs */}
+              {Array.from({ length: itemsPerColumn - column.length }).map((_, index) => (
+                <div key={index} className="flex flex-row justify-between items-center border border-white-600">
+                  <div className="flex items-center mx-2">
+                    <div className="text-gray-300 text-xs">Empty:</div>
+                    <div className="font-segment text-gray-300 text-md text-gray-500 mx-2 px-2 py-2">
+                      (empty)
+                    </div>
+                    <div className="text-gray-300 text-xs"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
 			<DynamicModal
 				isOpen={isModalOpen}
 				onClose={closeModal}
@@ -312,8 +270,8 @@ const Chart: React.FC<ChartProps> = ({props}) => {
 			>
 				{modalContent}
 			</DynamicModal>
-		</div>
-	)
-}
+    </div>
+  );
+};
 
-export default Chart
+export default PowerMeter;

@@ -29,7 +29,8 @@ const addressVariables:React.FC = () => {
     modbus_address:'',
     length_address:'',
     variable_name:'',
-    unit:''
+    unit:'',
+    multiplier_value:'',
   };
 
   // const fieldConfig: Record<string, FieldConfig> = {
@@ -97,17 +98,20 @@ const addressVariables:React.FC = () => {
 
   const fetchData = async () => {
     try {
+      const authToken = localStorage.getItem('authToken');
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+
       // Fetch data from your API
-      const response = await api.get('/config/addressVariable');
+      const response = await api.get('/config/addressVariable', { headers });
       const fetchedData: TableData[] = response.data;
 
       // Fetch Devices Address List
-      const devicesAddressResponse = await api.get('/config/deviceAddress');
+      const devicesAddressResponse = await api.get('/config/deviceAddress', { headers });
       const devicesAddress: AddressDeviceData[] = devicesAddressResponse.data;
       setListAddressDevices(devicesAddress);
       
       // Fetch Devices List
-      const devicesResponse = await api.get('config/devices');
+      const devicesResponse = await api.get('config/devices', { headers });
       const devices: DevicesData[] = devicesResponse.data;
       setListDevices(devices);
 
@@ -138,6 +142,7 @@ const addressVariables:React.FC = () => {
         length_address: { type: 'number' },
         variable_name: { type: 'text' },
         unit: { type: 'text' },
+        multiplier_value: { type: 'number' },
       })
 
       console.log(fetchedData)

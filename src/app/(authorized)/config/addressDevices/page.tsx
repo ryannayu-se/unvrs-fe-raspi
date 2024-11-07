@@ -83,12 +83,15 @@ const addressDevices:React.FC = () => {
 
   const fetchData = async () => {
     try {
+      const authToken = localStorage.getItem('authToken');
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+
       // Fetch Devices Address List
-      const response = await api.get('/config/deviceAddress');
+      const response = await api.get('/config/deviceAddress', { headers });
       const fetchedData: TableData[] = response.data;
 
       // Fetch Devices List
-      const devicesResponse = await api.get('config/devices');
+      const devicesResponse = await api.get('config/devices', { headers });
       const devices: DevicesData[] = devicesResponse.data;
       setListDevices(devices);
 

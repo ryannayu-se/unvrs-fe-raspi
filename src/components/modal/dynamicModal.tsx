@@ -12,7 +12,7 @@ const DynamicModal: React.FC<DynamicModalProps> = ({ isOpen, onClose, title, chi
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg relative">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-auto min-w-[500px] max-w-full max-h-[80vh] flex flex-col relative">
         <button
           onClick={onClose}
           className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
@@ -20,7 +20,7 @@ const DynamicModal: React.FC<DynamicModalProps> = ({ isOpen, onClose, title, chi
           &times;
         </button>
         <h2 className="text-xl font-bold mb-4">{title}</h2>
-        {children}
+        <div className="overflow-y-auto flex-grow">{children}</div>
       </div>
     </div>
   );
